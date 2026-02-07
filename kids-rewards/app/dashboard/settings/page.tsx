@@ -6,6 +6,7 @@ interface Kid {
   id: string;
   display_name: string;
   username: string;
+  has_pin?: boolean;
 }
 
 interface Contact {
@@ -63,12 +64,18 @@ export default function SettingsPage() {
   const [resetting, setResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
+  // Kid PINs
+  const [kidPins, setKidPins] = useState<Record<string, string>>({});
+  const [savingPin, setSavingPin] = useState<string | null>(null);
+  const [kidsList, setKidsList] = useState<Kid[]>([]);
+
   useEffect(() => {
     Promise.all([
       fetch('/api/settings').then(res => res.json()),
       fetch('/api/rewards').then(res => res.json()),
+      fetch('/api/kids').then(res => res.json()),
     ])
-      .then(([settings, rewardsData]) => {
+      .then(([settings, rewardsData, kidsData]) => {
         setData(settings);
         setDisplayName(settings.parent.display_name);
         setAssignedKids(new Set(settings.assignedKidIds));
@@ -76,6 +83,7 @@ export default function SettingsPage() {
         setResetSchedule(settings.resetSchedule || 'none');
         setLastResetAt(settings.lastResetAt);
         setRewards(Array.isArray(rewardsData) ? rewardsData : []);
+        setKidsList(Array.isArray(kidsData) ? kidsData : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -312,6 +320,29 @@ export default function SettingsPage() {
     if (result.success) {
       setLastResetAt(new Date().toISOString());
       showMessage('Points reset successfully!');
+    } else {
+      showMessage(`Error: ${result.error}`);
+    }
+  }
+
+  async function savePin(kidId: string) {
+    const pin = kidPins[kidId];
+    if (!pin || !/^\d{4}$/.test(pin)) {
+      showMessage('PIN must be exactly 4 digits');
+      return;
+    }
+    setSavingPin(kidId);
+    const res = await fetch('/api/kids', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_pin', kid_id: kidId, pin }),
+    });
+    const result = await res.json();
+    setSavingPin(null);
+    if (result.success) {
+      setKidsList(prev => prev.map(k => k.id === kidId ? { ...k, has_pin: true } : k));
+      setKidPins(prev => ({ ...prev, [kidId]: '' }));
+      showMessage('PIN saved!');
     } else {
       showMessage(`Error: ${result.error}`);
     }
@@ -572,6 +603,48 @@ export default function SettingsPage() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Kid Redemption PINs */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Redemption PINs</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Set a 4-digit PIN for each kid to verify their identity when redeeming rewards via Telegram.
+        </p>
+        {kidsList.length > 0 ? (
+          <div className="space-y-3">
+            {kidsList.map(kid => (
+              <div key={kid.id} className="flex items-center space-x-3 bg-gray-50 rounded-lg px-4 py-3">
+                <div className="flex-1">
+                  <span className="text-sm font-medium text-gray-900">{kid.display_name}</span>
+                  <span className="text-sm text-gray-500 ml-2">@{kid.username}</span>
+                  {kid.has_pin && <span className="text-xs text-green-600 ml-2">(PIN set)</span>}
+                  {!kid.has_pin && <span className="text-xs text-orange-500 ml-2">(no PIN)</span>}
+                </div>
+                <input
+                  type="password"
+                  maxLength={4}
+                  placeholder="4-digit PIN"
+                  value={kidPins[kid.id] || ''}
+                  onChange={e => {
+                    const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                    setKidPins(prev => ({ ...prev, [kid.id]: val }));
+                  }}
+                  className="w-28 rounded-md border border-gray-300 px-3 py-1 text-sm text-center tracking-widest"
+                />
+                <button
+                  onClick={() => savePin(kid.id)}
+                  disabled={savingPin === kid.id || !kidPins[kid.id] || kidPins[kid.id]?.length !== 4}
+                  className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                >
+                  {savingPin === kid.id ? 'Saving...' : kid.has_pin ? 'Change' : 'Set PIN'}
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No kids found. Add kids to your household first.</p>
+        )}
       </div>
 
       {/* Kid Assignments */}

@@ -640,7 +640,7 @@ export async function handleCommand(
         `🏆 /leaderboard — Family rankings\n` +
         `📋 /summary — Today's activity\n` +
         `🎁 /rewards — View reward catalog\n` +
-        `🎁 /redeem @yourname <reward> — Redeem stars for a reward\n` +
+        `🎁 /redeem @yourname <pin> <reward> — Redeem stars for a reward\n` +
         `🎉 /bonus @kid stars reason — Award bonus stars (parents)\n` +
         `🔗 /join <code> — Link this chat to a family\n` +
         `❓ /help — Show this message`
@@ -807,7 +807,7 @@ export async function handleCommand(
       rewards.forEach((r, i) => {
         msg += `${i + 1}. ${r.name}${r.description ? ` (${r.description})` : ''} — ${r.star_cost}⭐\n`;
       });
-      msg += `\nTo redeem: /redeem @yourname <reward name>`;
+      msg += `\nTo redeem: /redeem @yourname <pin> <reward name>`;
 
       await provider.sendMessage(chatId, msg);
       break;
@@ -815,28 +815,46 @@ export async function handleCommand(
 
     case '/redeem': {
       const redeemText = text.replace('/redeem', '').trim();
-      const { username: redeemUsername, cleanText: rewardText } = parseIdentity(redeemText);
+      const { username: redeemUsername, cleanText: afterUsername } = parseIdentity(redeemText);
 
       if (!redeemUsername) {
-        await provider.sendMessage(chatId, `🎁 Redeem a Reward\n\nUsage: /redeem @yourname <reward name>\n\nExample: /redeem @alice Screen Time`);
+        await provider.sendMessage(chatId, `🎁 Redeem a Reward\n\nUsage: /redeem @yourname <pin> <reward name>\n\nExample: /redeem @alice 1234 Screen Time`);
         return;
       }
 
-      if (!rewardText || rewardText.trim().length === 0) {
-        await provider.sendMessage(chatId, `⚠️ Please specify a reward name.\n\nUsage: /redeem @${redeemUsername} <reward name>\n\nType /rewards to see available rewards.`);
+      // Parse PIN and reward text from remaining string: "<pin> <reward name>"
+      const afterTrimmed = (afterUsername || '').trim();
+      const pinMatch = afterTrimmed.match(/^(\d{4})\s+(.+)/);
+
+      if (!pinMatch) {
+        await provider.sendMessage(chatId, `🎁 Redeem a Reward\n\nUsage: /redeem @${redeemUsername} <pin> <reward name>\n\nExample: /redeem @${redeemUsername} 1234 Screen Time\n\nType /rewards to see available rewards.`);
         return;
       }
 
-      // Look up kid
+      const providedPin = pinMatch[1];
+      const rewardText = pinMatch[2];
+
+      // Look up kid (including pin for validation)
       const { data: redeemKid } = await supabaseAdmin
         .from('kids')
-        .select('id, display_name')
+        .select('id, display_name, pin')
         .eq('household_id', householdId)
         .ilike('username', redeemUsername)
         .single();
 
       if (!redeemKid) {
         await provider.sendMessage(chatId, `❌ Kid not found: @${redeemUsername}`);
+        return;
+      }
+
+      // Validate PIN
+      if (!redeemKid.pin) {
+        await provider.sendMessage(chatId, `🔒 No PIN set for ${redeemKid.display_name}.\n\nAsk your parent to set a redemption PIN first.`);
+        return;
+      }
+
+      if (providedPin !== redeemKid.pin) {
+        await provider.sendMessage(chatId, `❌ Wrong PIN. Try again.`);
         return;
       }
 
