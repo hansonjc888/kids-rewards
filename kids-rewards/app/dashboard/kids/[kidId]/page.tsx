@@ -34,6 +34,13 @@ interface Redemption {
   resolved_at: string | null;
 }
 
+interface LedgerEntry {
+  id: string;
+  delta_points: number;
+  reason: string;
+  created_at: string;
+}
+
 export default function KidProfilePage() {
   const params = useParams();
   const kidId = params.kidId as string;
@@ -41,25 +48,29 @@ export default function KidProfilePage() {
   const [kid, setKid] = useState<Kid | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [redemptions, setRedemptions] = useState<Redemption[]>([]);
+  const [ledger, setLedger] = useState<LedgerEntry[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [kidsRes, submissionsRes, redemptionsRes] = await Promise.all([
+        const [kidsRes, submissionsRes, redemptionsRes, ledgerRes] = await Promise.all([
           fetch('/api/kids'),
           fetch(`/api/submissions?kid_id=${kidId}&limit=100`),
           fetch(`/api/redemptions?kid_id=${kidId}`),
+          fetch(`/api/points-ledger?kid_id=${kidId}`),
         ]);
 
         const kidsData: Kid[] = await kidsRes.json();
         const submissionsData = await submissionsRes.json();
         const redemptionsData = await redemptionsRes.json();
+        const ledgerData = await ledgerRes.json();
 
         const matchedKid = kidsData.find((k) => k.id === kidId) || null;
         setKid(matchedKid);
         setSubmissions(Array.isArray(submissionsData) ? submissionsData : []);
         setRedemptions(Array.isArray(redemptionsData) ? redemptionsData : []);
+        setLedger(Array.isArray(ledgerData) ? ledgerData : []);
       } catch (error) {
         console.error('Error fetching kid profile:', error);
       } finally {
@@ -258,6 +269,33 @@ export default function KidProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Points Transaction Log */}
+      <div className="bg-white rounded-lg shadow mb-8">
+        <div className="px-6 py-4 border-b">
+          <h2 className="text-xl font-bold text-gray-900">Points Transaction Log</h2>
+        </div>
+        <div className="divide-y">
+          {ledger.length === 0 ? (
+            <div className="p-6 text-center text-gray-500">No transactions yet.</div>
+          ) : (
+            ledger.map((entry) => {
+              const isPositive = entry.delta_points > 0;
+              return (
+                <div key={entry.id} className="px-6 py-3 flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm text-gray-900">{entry.reason}</p>
+                    <p className="text-xs text-gray-500">{new Date(entry.created_at).toLocaleDateString()} {new Date(entry.created_at).toLocaleTimeString()}</p>
+                  </div>
+                  <span className={`text-sm font-bold ${isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                    {isPositive ? '+' : ''}{entry.delta_points}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
 
       {/* Submissions Feed */}
       <div className="bg-white rounded-lg shadow">
