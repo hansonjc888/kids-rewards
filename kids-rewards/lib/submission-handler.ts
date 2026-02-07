@@ -629,6 +629,25 @@ export async function handleCommand(
   const { getKidStats, getLeaderboard, getRecentSubmissions, getTodaySummary } = await import('./stats');
 
   switch (command) {
+    case '/help': {
+      await provider.sendMessage(
+        chatId,
+        `📋 Available Commands\n\n` +
+        `📝 Submit an achievement:\n` +
+        `   @yourname Did something great!\n\n` +
+        `📊 /mystats @yourname — View your stars and stats\n` +
+        `📜 /history @yourname — See recent submissions\n` +
+        `🏆 /leaderboard — Family rankings\n` +
+        `📋 /summary — Today's activity\n` +
+        `🎁 /rewards — View reward catalog\n` +
+        `🎁 /redeem @yourname <reward> — Redeem stars for a reward\n` +
+        `🎉 /bonus @kid stars reason — Award bonus stars (parents)\n` +
+        `🔗 /join <code> — Link this chat to a family\n` +
+        `❓ /help — Show this message`
+      );
+      break;
+    }
+
     case '/mystats': {
       const { username } = parseIdentity(text.replace('/mystats', '').trim());
 

@@ -7,7 +7,7 @@ import {
   handleCommand
 } from '@/lib/submission-handler';
 
-const COMMANDS = ['/mystats', '/history', '/leaderboard', '/summary', '/bonus', '/join', '/rewards', '/redeem'];
+const COMMANDS = ['/help', '/mystats', '/history', '/leaderboard', '/summary', '/bonus', '/join', '/rewards', '/redeem'];
 
 /**
  * POST /api/webhooks/telegram
@@ -56,8 +56,9 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      // Skip other slash commands we don't handle
+      // Unknown slash commands — hint to use /help
       if (text.startsWith('/')) {
+        telegram.sendMessage(message.from, `Unknown command. Type /help to see available commands.`).catch(() => {});
         continue;
       }
 
