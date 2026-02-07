@@ -25,28 +25,41 @@ interface Submission {
   approvals: Array<{ stars: number }>;
 }
 
+interface Redemption {
+  id: string;
+  reward_name: string;
+  star_cost: number;
+  status: string;
+  created_at: string;
+  resolved_at: string | null;
+}
+
 export default function KidProfilePage() {
   const params = useParams();
   const kidId = params.kidId as string;
 
   const [kid, setKid] = useState<Kid | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [redemptions, setRedemptions] = useState<Redemption[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [kidsRes, submissionsRes] = await Promise.all([
+        const [kidsRes, submissionsRes, redemptionsRes] = await Promise.all([
           fetch('/api/kids'),
-          fetch(`/api/submissions?kid_id=${kidId}&limit=100`)
+          fetch(`/api/submissions?kid_id=${kidId}&limit=100`),
+          fetch(`/api/redemptions?kid_id=${kidId}`),
         ]);
 
         const kidsData: Kid[] = await kidsRes.json();
         const submissionsData = await submissionsRes.json();
+        const redemptionsData = await redemptionsRes.json();
 
         const matchedKid = kidsData.find((k) => k.id === kidId) || null;
         setKid(matchedKid);
         setSubmissions(Array.isArray(submissionsData) ? submissionsData : []);
+        setRedemptions(Array.isArray(redemptionsData) ? redemptionsData : []);
       } catch (error) {
         console.error('Error fetching kid profile:', error);
       } finally {
@@ -56,6 +69,21 @@ export default function KidProfilePage() {
 
     fetchData();
   }, [kidId]);
+
+  async function handleRedemptionAction(redemptionId: string, action: 'approve' | 'deny') {
+    const res = await fetch('/api/redemptions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, redemption_id: redemptionId }),
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      setRedemptions(prev =>
+        prev.map(r => r.id === redemptionId ? { ...r, status: result.status, resolved_at: new Date().toISOString() } : r)
+      );
+    }
+  }
 
   if (loading) {
     return (
@@ -176,6 +204,57 @@ export default function KidProfilePage() {
                   </span>
                 ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Redemption History */}
+      {redemptions.length > 0 && (
+        <div className="bg-white rounded-lg shadow mb-8">
+          <div className="px-6 py-4 border-b">
+            <h2 className="text-xl font-bold text-gray-900">Redemptions</h2>
+          </div>
+          <div className="divide-y">
+            {redemptions.map((redemption) => {
+              const statusColor =
+                redemption.status === 'approved'
+                  ? 'bg-green-100 text-green-800'
+                  : redemption.status === 'denied'
+                  ? 'bg-red-100 text-red-800'
+                  : 'bg-yellow-100 text-yellow-800';
+
+              const statusEmoji =
+                redemption.status === 'approved' ? '✅' : redemption.status === 'denied' ? '❌' : '⏳';
+
+              return (
+                <div key={redemption.id} className="p-4 flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-medium text-gray-900">{redemption.reward_name}</span>
+                    <span className="text-sm font-bold text-yellow-600 ml-2">{redemption.star_cost} stars</span>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ml-2 ${statusColor}`}>
+                      {statusEmoji} {redemption.status}
+                    </span>
+                    <span className="text-xs text-gray-500 ml-2">{new Date(redemption.created_at).toLocaleDateString()}</span>
+                  </div>
+                  {redemption.status === 'pending' && (
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => handleRedemptionAction(redemption.id, 'approve')}
+                        className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
+                      >
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => handleRedemptionAction(redemption.id, 'deny')}
+                        className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700"
+                      >
+                        Deny
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

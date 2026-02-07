@@ -7,7 +7,7 @@ import {
   handleCommand
 } from '@/lib/submission-handler';
 
-const COMMANDS = ['/mystats', '/history', '/leaderboard', '/summary', '/bonus', '/join'];
+const COMMANDS = ['/mystats', '/history', '/leaderboard', '/summary', '/bonus', '/join', '/rewards', '/redeem'];
 
 /**
  * POST /api/webhooks/telegram

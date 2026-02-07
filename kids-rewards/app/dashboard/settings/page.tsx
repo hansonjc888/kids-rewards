@@ -14,12 +14,22 @@ interface Contact {
   platform_user_id: string;
 }
 
+interface Reward {
+  id: string;
+  name: string;
+  description: string | null;
+  star_cost: number;
+  is_active: boolean;
+}
+
 interface SettingsData {
   parent: { display_name: string; email: string };
   assignedKidIds: string[];
   allKids: Kid[];
   contacts: Contact[];
   inviteCode: string | null;
+  resetSchedule: string;
+  lastResetAt: string | null;
 }
 
 export default function SettingsPage() {
@@ -37,14 +47,35 @@ export default function SettingsPage() {
   const [newPlatform, setNewPlatform] = useState<'telegram' | 'whatsapp'>('telegram');
   const [newPlatformUserId, setNewPlatformUserId] = useState('');
 
+  // Rewards catalog
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [newRewardName, setNewRewardName] = useState('');
+  const [newRewardDesc, setNewRewardDesc] = useState('');
+  const [newRewardCost, setNewRewardCost] = useState('');
+  const [editingReward, setEditingReward] = useState<string | null>(null);
+  const [editRewardName, setEditRewardName] = useState('');
+  const [editRewardDesc, setEditRewardDesc] = useState('');
+  const [editRewardCost, setEditRewardCost] = useState('');
+
+  // Reset schedule
+  const [resetSchedule, setResetSchedule] = useState('none');
+  const [lastResetAt, setLastResetAt] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+
   useEffect(() => {
-    fetch('/api/settings')
-      .then(res => res.json())
-      .then(settings => {
+    Promise.all([
+      fetch('/api/settings').then(res => res.json()),
+      fetch('/api/rewards').then(res => res.json()),
+    ])
+      .then(([settings, rewardsData]) => {
         setData(settings);
         setDisplayName(settings.parent.display_name);
         setAssignedKids(new Set(settings.assignedKidIds));
         setInviteCode(settings.inviteCode);
+        setResetSchedule(settings.resetSchedule || 'none');
+        setLastResetAt(settings.lastResetAt);
+        setRewards(Array.isArray(rewardsData) ? rewardsData : []);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -164,6 +195,128 @@ export default function SettingsPage() {
     }
   }
 
+  // Rewards CRUD
+  async function addReward() {
+    const cost = parseInt(newRewardCost);
+    if (!newRewardName.trim() || !cost || cost < 1) return;
+
+    const res = await fetch('/api/rewards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: newRewardName.trim(),
+        description: newRewardDesc.trim() || null,
+        star_cost: cost,
+      }),
+    });
+    const result = await res.json();
+
+    if (result.id) {
+      setRewards(prev => [result, ...prev]);
+      setNewRewardName('');
+      setNewRewardDesc('');
+      setNewRewardCost('');
+      showMessage('Reward added!');
+    } else {
+      showMessage(`Error: ${result.error}`);
+    }
+  }
+
+  async function updateReward(id: string) {
+    const cost = parseInt(editRewardCost);
+    if (!editRewardName.trim() || !cost || cost < 1) return;
+
+    const res = await fetch('/api/rewards', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id,
+        name: editRewardName.trim(),
+        description: editRewardDesc.trim() || null,
+        star_cost: cost,
+      }),
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      setRewards(prev => prev.map(r => r.id === id ? { ...r, name: editRewardName.trim(), description: editRewardDesc.trim() || null, star_cost: cost } : r));
+      setEditingReward(null);
+      showMessage('Reward updated!');
+    } else {
+      showMessage(`Error: ${result.error}`);
+    }
+  }
+
+  async function deleteReward(id: string) {
+    const res = await fetch('/api/rewards', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      setRewards(prev => prev.map(r => r.id === id ? { ...r, is_active: false } : r));
+      showMessage('Reward deactivated!');
+    } else {
+      showMessage(`Error: ${result.error}`);
+    }
+  }
+
+  async function reactivateReward(id: string) {
+    const res = await fetch('/api/rewards', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, is_active: true }),
+    });
+    const result = await res.json();
+
+    if (result.success) {
+      setRewards(prev => prev.map(r => r.id === id ? { ...r, is_active: true } : r));
+      showMessage('Reward reactivated!');
+    } else {
+      showMessage(`Error: ${result.error}`);
+    }
+  }
+
+  function startEditing(reward: Reward) {
+    setEditingReward(reward.id);
+    setEditRewardName(reward.name);
+    setEditRewardDesc(reward.description || '');
+    setEditRewardCost(reward.star_cost.toString());
+  }
+
+  // Reset
+  async function saveResetSchedule(value: string) {
+    setResetSchedule(value);
+    const res = await fetch('/api/settings', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'update_reset_schedule', value }),
+    });
+    const result = await res.json();
+    showMessage(result.success ? 'Reset schedule updated!' : `Error: ${result.error}`);
+  }
+
+  async function performReset() {
+    setResetting(true);
+    setShowResetConfirm(false);
+    const res = await fetch('/api/reset', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ confirm: true }),
+    });
+    const result = await res.json();
+    setResetting(false);
+
+    if (result.success) {
+      setLastResetAt(new Date().toISOString());
+      showMessage('Points reset successfully!');
+    } else {
+      showMessage(`Error: ${result.error}`);
+    }
+  }
+
   if (loading) {
     return (
       <div className="text-center py-12">
@@ -249,6 +402,175 @@ export default function SettingsPage() {
           >
             {regenerating ? 'Generating...' : inviteCode ? 'Regenerate' : 'Generate'}
           </button>
+        </div>
+      </div>
+
+      {/* Rewards Catalog */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Rewards Catalog</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Define rewards that kids can redeem their stars for via Telegram.
+        </p>
+
+        {/* Existing rewards */}
+        {rewards.length > 0 ? (
+          <div className="space-y-2 mb-6">
+            {rewards.map(reward => (
+              <div key={reward.id} className={`flex items-center justify-between rounded-lg px-4 py-3 ${reward.is_active ? 'bg-gray-50' : 'bg-gray-100 opacity-60'}`}>
+                {editingReward === reward.id ? (
+                  <div className="flex items-end space-x-2 flex-1">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={editRewardName}
+                        onChange={e => setEditRewardName(e.target.value)}
+                        className="block w-full rounded-md border border-gray-300 px-3 py-1 text-sm"
+                        placeholder="Reward name"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={editRewardDesc}
+                        onChange={e => setEditRewardDesc(e.target.value)}
+                        className="block w-full rounded-md border border-gray-300 px-3 py-1 text-sm"
+                        placeholder="Description"
+                      />
+                    </div>
+                    <div className="w-20">
+                      <input
+                        type="number"
+                        value={editRewardCost}
+                        onChange={e => setEditRewardCost(e.target.value)}
+                        className="block w-full rounded-md border border-gray-300 px-3 py-1 text-sm"
+                        min="1"
+                      />
+                    </div>
+                    <button onClick={() => updateReward(reward.id)} className="text-sm text-blue-600 hover:text-blue-800">Save</button>
+                    <button onClick={() => setEditingReward(null)} className="text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <span className="text-sm font-medium text-gray-900">{reward.name}</span>
+                      {reward.description && <span className="text-sm text-gray-500 ml-2">({reward.description})</span>}
+                      <span className="text-sm font-bold text-yellow-600 ml-2">{reward.star_cost} stars</span>
+                      {!reward.is_active && <span className="text-xs text-red-500 ml-2">(inactive)</span>}
+                    </div>
+                    <div className="flex space-x-2">
+                      <button onClick={() => startEditing(reward)} className="text-sm text-blue-600 hover:text-blue-800">Edit</button>
+                      {reward.is_active ? (
+                        <button onClick={() => deleteReward(reward.id)} className="text-sm text-red-600 hover:text-red-800">Remove</button>
+                      ) : (
+                        <button onClick={() => reactivateReward(reward.id)} className="text-sm text-green-600 hover:text-green-800">Reactivate</button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 mb-6">No rewards configured yet.</p>
+        )}
+
+        {/* Add reward form */}
+        <div className="flex items-end space-x-2">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+            <input
+              type="text"
+              value={newRewardName}
+              onChange={e => setNewRewardName(e.target.value)}
+              placeholder="e.g. Screen Time (30 min)"
+              className="block w-full rounded-md border border-gray-300 px-3 py-2"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <input
+              type="text"
+              value={newRewardDesc}
+              onChange={e => setNewRewardDesc(e.target.value)}
+              placeholder="Optional description"
+              className="block w-full rounded-md border border-gray-300 px-3 py-2"
+            />
+          </div>
+          <div className="w-24">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Stars</label>
+            <input
+              type="number"
+              value={newRewardCost}
+              onChange={e => setNewRewardCost(e.target.value)}
+              placeholder="5"
+              min="1"
+              className="block w-full rounded-md border border-gray-300 px-3 py-2"
+            />
+          </div>
+          <button
+            onClick={addReward}
+            disabled={!newRewardName.trim() || !newRewardCost || parseInt(newRewardCost) < 1}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm"
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      {/* Reset Schedule */}
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Points Reset Schedule</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Automatically reset all kids&apos; star balances on a schedule to keep motivation fresh.
+        </p>
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
+            <select
+              value={resetSchedule}
+              onChange={e => saveResetSchedule(e.target.value)}
+              className="rounded-md border border-gray-300 px-3 py-2"
+            >
+              <option value="none">None (manual only)</option>
+              <option value="monthly">Monthly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </div>
+
+          {lastResetAt && (
+            <p className="text-sm text-gray-500">
+              Last reset: {new Date(lastResetAt).toLocaleDateString()} {new Date(lastResetAt).toLocaleTimeString()}
+            </p>
+          )}
+
+          <div>
+            {showResetConfirm ? (
+              <div className="flex items-center space-x-3">
+                <span className="text-sm text-red-600 font-medium">Are you sure? This will zero out all balances.</span>
+                <button
+                  onClick={performReset}
+                  disabled={resetting}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
+                >
+                  {resetting ? 'Resetting...' : 'Yes, Reset Now'}
+                </button>
+                <button
+                  onClick={() => setShowResetConfirm(false)}
+                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm"
+              >
+                Reset Now
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

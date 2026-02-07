@@ -440,6 +440,122 @@ export async function handleCallbackQuery(
     } else {
       await provider.answerCallbackQuery(queryId, `❌ ${result.error}`);
     }
+
+  } else if (action === 'redeem_approve') {
+    const redemptionId = submissionId; // reusing parsed variable
+    await handleRedemptionApproval(redemptionId, chatId, provider);
+    await provider.answerCallbackQuery(queryId, '✅ Redemption approved!');
+    if (messageId) {
+      await provider.editMessageText(
+        chatId,
+        messageId,
+        `✅ APPROVED\n\n${query.message?.text || ''}\n\nApproved at ${new Date().toLocaleTimeString()}`
+      );
+    }
+
+  } else if (action === 'redeem_deny') {
+    const redemptionId = submissionId;
+    await handleRedemptionDenial(redemptionId, chatId, provider);
+    await provider.answerCallbackQuery(queryId, '❌ Redemption denied');
+    if (messageId) {
+      await provider.editMessageText(
+        chatId,
+        messageId,
+        `❌ DENIED\n\n${query.message?.text || ''}\n\nDenied at ${new Date().toLocaleTimeString()}`
+      );
+    }
+  }
+}
+
+/**
+ * Handle redemption approval from Telegram callback
+ */
+async function handleRedemptionApproval(
+  redemptionId: string,
+  parentChatId: string,
+  provider: TelegramProvider
+): Promise<void> {
+  const { data: redemption } = await supabaseAdmin
+    .from('redemptions')
+    .select('*, kids(display_name)')
+    .eq('id', redemptionId)
+    .single();
+
+  if (!redemption || redemption.status !== 'pending') return;
+
+  // Re-check balance
+  const { data: ledger } = await supabaseAdmin
+    .from('points_ledger')
+    .select('delta_points')
+    .eq('kid_id', redemption.kid_id);
+
+  const balance = ledger?.reduce((sum: number, e: any) => sum + e.delta_points, 0) || 0;
+
+  if (balance < redemption.star_cost) {
+    await provider.sendMessage(parentChatId, `❌ Cannot approve — ${(redemption.kids as any).display_name} only has ${balance}⭐ but needs ${redemption.star_cost}⭐.`);
+    return;
+  }
+
+  // Deduct points
+  await supabaseAdmin
+    .from('points_ledger')
+    .insert({
+      kid_id: redemption.kid_id,
+      delta_points: -redemption.star_cost,
+      reason: `Redeemed: ${redemption.reward_name}`,
+      submission_id: null,
+    });
+
+  // Update redemption
+  await supabaseAdmin
+    .from('redemptions')
+    .update({
+      status: 'approved',
+      parent_user_id: parentChatId,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', redemptionId);
+
+  // Notify kid
+  if (redemption.platform_chat_id) {
+    await provider.sendMessage(
+      redemption.platform_chat_id,
+      `🎉 Your redemption was approved!\n\n🎁 ${redemption.reward_name} (${redemption.star_cost}⭐)\n\nEnjoy, ${(redemption.kids as any).display_name}!`
+    );
+  }
+}
+
+/**
+ * Handle redemption denial from Telegram callback
+ */
+async function handleRedemptionDenial(
+  redemptionId: string,
+  parentChatId: string,
+  provider: TelegramProvider
+): Promise<void> {
+  const { data: redemption } = await supabaseAdmin
+    .from('redemptions')
+    .select('*, kids(display_name)')
+    .eq('id', redemptionId)
+    .single();
+
+  if (!redemption || redemption.status !== 'pending') return;
+
+  await supabaseAdmin
+    .from('redemptions')
+    .update({
+      status: 'denied',
+      parent_user_id: parentChatId,
+      resolved_at: new Date().toISOString(),
+    })
+    .eq('id', redemptionId);
+
+  // Notify kid
+  if (redemption.platform_chat_id) {
+    await provider.sendMessage(
+      redemption.platform_chat_id,
+      `❌ Your redemption request was denied.\n\n🎁 ${redemption.reward_name} (${redemption.star_cost}⭐)\n\nTry again later, ${(redemption.kids as any).display_name}!`
+    );
   }
 }
 
@@ -652,6 +768,128 @@ export async function handleCommand(
       }
 
       await provider.sendMessage(chatId, `🎁 Bonus awarded!\n\n${kid.display_name} earned ${bonusStars}⭐\n\nReason: ${reason}`);
+      break;
+    }
+
+    case '/rewards': {
+      const { data: rewards } = await supabaseAdmin
+        .from('rewards')
+        .select('name, description, star_cost')
+        .eq('household_id', householdId)
+        .eq('is_active', true)
+        .order('star_cost', { ascending: true });
+
+      if (!rewards || rewards.length === 0) {
+        await provider.sendMessage(chatId, `🎁 Rewards Catalog\n\nNo rewards available yet. Ask your parents to add some!`);
+        return;
+      }
+
+      let msg = `🎁 Rewards Catalog\n\n`;
+      rewards.forEach((r, i) => {
+        msg += `${i + 1}. ${r.name}${r.description ? ` (${r.description})` : ''} — ${r.star_cost}⭐\n`;
+      });
+      msg += `\nTo redeem: /redeem @yourname <reward name>`;
+
+      await provider.sendMessage(chatId, msg);
+      break;
+    }
+
+    case '/redeem': {
+      const redeemText = text.replace('/redeem', '').trim();
+      const { username: redeemUsername, cleanText: rewardText } = parseIdentity(redeemText);
+
+      if (!redeemUsername) {
+        await provider.sendMessage(chatId, `🎁 Redeem a Reward\n\nUsage: /redeem @yourname <reward name>\n\nExample: /redeem @alice Screen Time`);
+        return;
+      }
+
+      if (!rewardText || rewardText.trim().length === 0) {
+        await provider.sendMessage(chatId, `⚠️ Please specify a reward name.\n\nUsage: /redeem @${redeemUsername} <reward name>\n\nType /rewards to see available rewards.`);
+        return;
+      }
+
+      // Look up kid
+      const { data: redeemKid } = await supabaseAdmin
+        .from('kids')
+        .select('id, display_name')
+        .eq('household_id', householdId)
+        .ilike('username', redeemUsername)
+        .single();
+
+      if (!redeemKid) {
+        await provider.sendMessage(chatId, `❌ Kid not found: @${redeemUsername}`);
+        return;
+      }
+
+      // Match reward (case-insensitive)
+      const { data: rewards } = await supabaseAdmin
+        .from('rewards')
+        .select('id, name, description, star_cost')
+        .eq('household_id', householdId)
+        .eq('is_active', true);
+
+      const matchedReward = rewards?.find(
+        r => r.name.toLowerCase() === rewardText.trim().toLowerCase()
+      );
+
+      if (!matchedReward) {
+        await provider.sendMessage(chatId, `❌ Reward not found: "${rewardText.trim()}"\n\nType /rewards to see available rewards.`);
+        return;
+      }
+
+      // Check balance
+      const { data: ledger } = await supabaseAdmin
+        .from('points_ledger')
+        .select('delta_points')
+        .eq('kid_id', redeemKid.id);
+
+      const balance = ledger?.reduce((sum, e) => sum + e.delta_points, 0) || 0;
+
+      if (balance < matchedReward.star_cost) {
+        await provider.sendMessage(chatId, `❌ Not enough stars!\n\n${redeemKid.display_name} has ${balance}⭐ but needs ${matchedReward.star_cost}⭐ for "${matchedReward.name}".`);
+        return;
+      }
+
+      // Create redemption
+      const { data: redemption, error: redeemError } = await supabaseAdmin
+        .from('redemptions')
+        .insert({
+          kid_id: redeemKid.id,
+          household_id: householdId,
+          reward_id: matchedReward.id,
+          reward_name: matchedReward.name,
+          star_cost: matchedReward.star_cost,
+          status: 'pending',
+          platform_chat_id: chatId,
+        })
+        .select()
+        .single();
+
+      if (redeemError) {
+        console.error('Error creating redemption:', redeemError);
+        await provider.sendMessage(chatId, `❌ Error submitting redemption request.`);
+        return;
+      }
+
+      await provider.sendMessage(chatId, `✅ Redemption request submitted!\n\n🎁 ${matchedReward.name} (${matchedReward.star_cost}⭐)\n👤 ${redeemKid.display_name}\n\n⏳ Waiting for parent approval...`);
+
+      // Notify parents
+      const parentChatIds = await getParentContactsForKid(redeemKid.id, 'telegram');
+      const notifyIds = parentChatIds.length > 0 ? parentChatIds : [chatId];
+
+      const approveRow: MessageButton[] = [
+        { id: `redeem_approve:${redemption.id}`, label: '✅ Approve', data: `redeem_approve:${redemption.id}` },
+        { id: `redeem_deny:${redemption.id}`, label: '❌ Deny', data: `redeem_deny:${redemption.id}` },
+      ];
+
+      for (const parentId of notifyIds) {
+        await provider.sendMessageWithButtonRows(
+          parentId,
+          `🎁 Redemption Request\n\n👤 ${redeemKid.display_name} wants to redeem:\n🏆 ${matchedReward.name} (${matchedReward.star_cost}⭐)\n💰 Current balance: ${balance}⭐`,
+          [approveRow]
+        );
+      }
+
       break;
     }
   }

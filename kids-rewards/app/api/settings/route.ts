@@ -56,6 +56,8 @@ export async function GET() {
     .single();
 
   const inviteCode = household?.settings?.invite_code || null;
+  const resetSchedule = household?.settings?.reset_schedule || 'none';
+  const lastResetAt = household?.settings?.last_reset_at || null;
 
   return NextResponse.json({
     parent,
@@ -63,6 +65,8 @@ export async function GET() {
     allKids: allKids || [],
     contacts: contacts || [],
     inviteCode,
+    resetSchedule,
+    lastResetAt,
   });
 }
 
@@ -236,6 +240,43 @@ export async function POST(request: NextRequest) {
       .delete()
       .eq('id', contact_id)
       .eq('parent_id', user.id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  }
+
+  if (body.action === 'update_reset_schedule') {
+    const { value } = body;
+
+    if (!['none', 'monthly', 'yearly'].includes(value)) {
+      return NextResponse.json({ error: 'value must be none, monthly, or yearly' }, { status: 400 });
+    }
+
+    const { data: parent } = await supabaseAdmin
+      .from('parents')
+      .select('household_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!parent) {
+      return NextResponse.json({ error: 'Parent not found' }, { status: 404 });
+    }
+
+    const { data: household } = await supabaseAdmin
+      .from('households')
+      .select('settings')
+      .eq('id', parent.household_id)
+      .single();
+
+    const updatedSettings = { ...(household?.settings || {}), reset_schedule: value };
+
+    const { error } = await supabaseAdmin
+      .from('households')
+      .update({ settings: updatedSettings })
+      .eq('id', parent.household_id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
