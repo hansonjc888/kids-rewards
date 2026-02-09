@@ -33,6 +33,84 @@ interface SettingsData {
   lastResetAt: string | null;
 }
 
+const panelStyle = {
+  background: 'var(--bg-card)',
+  border: '2px solid var(--border-color)',
+  borderRadius: 10,
+  padding: 24,
+};
+
+const sectionTitleStyle = {
+  fontFamily: "'Silkscreen', monospace",
+  fontSize: 13,
+  fontWeight: 700 as const,
+  textTransform: 'uppercase' as const,
+  letterSpacing: 1,
+  color: 'var(--text-primary)',
+  marginBottom: 4,
+};
+
+const sectionDescStyle = {
+  fontSize: 13,
+  color: 'var(--text-secondary)',
+  marginBottom: 16,
+};
+
+const inputStyle = {
+  width: '100%',
+  borderRadius: 6,
+  border: '2px solid var(--border-color)',
+  padding: '10px 14px',
+  background: 'var(--bg-dark)',
+  color: 'var(--text-primary)',
+  fontSize: 14,
+};
+
+const labelStyle = {
+  display: 'block' as const,
+  fontSize: 12,
+  fontWeight: 600 as const,
+  color: 'var(--text-secondary)',
+  marginBottom: 6,
+  textTransform: 'uppercase' as const,
+  letterSpacing: 0.5,
+};
+
+const btnPrimary = {
+  padding: '8px 16px',
+  background: 'var(--accent-green)',
+  color: '#1a1a2e',
+  fontWeight: 700 as const,
+  fontSize: 13,
+  borderRadius: 6,
+  border: 'none',
+  cursor: 'pointer',
+  textTransform: 'uppercase' as const,
+  letterSpacing: 0.5,
+};
+
+const btnSecondary = {
+  padding: '8px 16px',
+  background: 'transparent',
+  color: 'var(--text-secondary)',
+  fontWeight: 600 as const,
+  fontSize: 13,
+  borderRadius: 6,
+  border: '2px solid var(--border-color)',
+  cursor: 'pointer',
+};
+
+const btnDanger = {
+  padding: '8px 16px',
+  background: 'rgba(255, 82, 82, 0.15)',
+  color: 'var(--accent-red)',
+  fontWeight: 600 as const,
+  fontSize: 13,
+  borderRadius: 6,
+  border: '1px solid rgba(255, 82, 82, 0.3)',
+  cursor: 'pointer',
+};
+
 export default function SettingsPage() {
   const [data, setData] = useState<SettingsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -44,11 +122,9 @@ export default function SettingsPage() {
   const [inviteCode, setInviteCode] = useState<string | null>(null);
   const [regenerating, setRegenerating] = useState(false);
 
-  // New contact form
   const [newPlatform, setNewPlatform] = useState<'telegram' | 'whatsapp'>('telegram');
   const [newPlatformUserId, setNewPlatformUserId] = useState('');
 
-  // Rewards catalog
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [newRewardName, setNewRewardName] = useState('');
   const [newRewardDesc, setNewRewardDesc] = useState('');
@@ -58,13 +134,11 @@ export default function SettingsPage() {
   const [editRewardDesc, setEditRewardDesc] = useState('');
   const [editRewardCost, setEditRewardCost] = useState('');
 
-  // Reset schedule
   const [resetSchedule, setResetSchedule] = useState('none');
   const [lastResetAt, setLastResetAt] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-  // Kid PINs
   const [kidPins, setKidPins] = useState<Record<string, string>>({});
   const [savingPin, setSavingPin] = useState<string | null>(null);
   const [kidsList, setKidsList] = useState<Kid[]>([]);
@@ -121,33 +195,23 @@ export default function SettingsPage() {
   function toggleKid(kidId: string) {
     setAssignedKids(prev => {
       const next = new Set(prev);
-      if (next.has(kidId)) {
-        next.delete(kidId);
-      } else {
-        next.add(kidId);
-      }
+      if (next.has(kidId)) next.delete(kidId);
+      else next.add(kidId);
       return next;
     });
   }
 
   async function addContact() {
     if (!newPlatformUserId.trim()) return;
-
     const res = await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'add_contact',
-        platform: newPlatform,
-        platform_user_id: newPlatformUserId.trim(),
-      }),
+      body: JSON.stringify({ action: 'add_contact', platform: newPlatform, platform_user_id: newPlatformUserId.trim() }),
     });
     const result = await res.json();
-
     if (result.success) {
       showMessage('Contact added!');
       setNewPlatformUserId('');
-      // Refresh settings
       const settingsRes = await fetch('/api/settings');
       const settings = await settingsRes.json();
       setData(settings);
@@ -160,19 +224,12 @@ export default function SettingsPage() {
     const res = await fetch('/api/settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'delete_contact',
-        contact_id: contactId,
-      }),
+      body: JSON.stringify({ action: 'delete_contact', contact_id: contactId }),
     });
     const result = await res.json();
-
     if (result.success) {
       showMessage('Contact removed!');
-      setData(prev => prev ? {
-        ...prev,
-        contacts: prev.contacts.filter(c => c.id !== contactId),
-      } : null);
+      setData(prev => prev ? { ...prev, contacts: prev.contacts.filter(c => c.id !== contactId) } : null);
     } else {
       showMessage(`Error: ${result.error}`);
     }
@@ -187,10 +244,9 @@ export default function SettingsPage() {
     });
     const result = await res.json();
     setRegenerating(false);
-
     if (result.success) {
       setInviteCode(result.invite_code);
-      showMessage('Invite code regenerated! Old code no longer works.');
+      showMessage('Invite code regenerated!');
     } else {
       showMessage(`Error: ${result.error}`);
     }
@@ -203,27 +259,18 @@ export default function SettingsPage() {
     }
   }
 
-  // Rewards CRUD
   async function addReward() {
     const cost = parseInt(newRewardCost);
     if (!newRewardName.trim() || !cost || cost < 1) return;
-
     const res = await fetch('/api/rewards', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: newRewardName.trim(),
-        description: newRewardDesc.trim() || null,
-        star_cost: cost,
-      }),
+      body: JSON.stringify({ name: newRewardName.trim(), description: newRewardDesc.trim() || null, star_cost: cost }),
     });
     const result = await res.json();
-
     if (result.id) {
       setRewards(prev => [result, ...prev]);
-      setNewRewardName('');
-      setNewRewardDesc('');
-      setNewRewardCost('');
+      setNewRewardName(''); setNewRewardDesc(''); setNewRewardCost('');
       showMessage('Reward added!');
     } else {
       showMessage(`Error: ${result.error}`);
@@ -233,19 +280,12 @@ export default function SettingsPage() {
   async function updateReward(id: string) {
     const cost = parseInt(editRewardCost);
     if (!editRewardName.trim() || !cost || cost < 1) return;
-
     const res = await fetch('/api/rewards', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id,
-        name: editRewardName.trim(),
-        description: editRewardDesc.trim() || null,
-        star_cost: cost,
-      }),
+      body: JSON.stringify({ id, name: editRewardName.trim(), description: editRewardDesc.trim() || null, star_cost: cost }),
     });
     const result = await res.json();
-
     if (result.success) {
       setRewards(prev => prev.map(r => r.id === id ? { ...r, name: editRewardName.trim(), description: editRewardDesc.trim() || null, star_cost: cost } : r));
       setEditingReward(null);
@@ -256,13 +296,8 @@ export default function SettingsPage() {
   }
 
   async function deleteReward(id: string) {
-    const res = await fetch('/api/rewards', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    });
+    const res = await fetch('/api/rewards', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
     const result = await res.json();
-
     if (result.success) {
       setRewards(prev => prev.map(r => r.id === id ? { ...r, is_active: false } : r));
       showMessage('Reward deactivated!');
@@ -272,13 +307,8 @@ export default function SettingsPage() {
   }
 
   async function reactivateReward(id: string) {
-    const res = await fetch('/api/rewards', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, is_active: true }),
-    });
+    const res = await fetch('/api/rewards', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, is_active: true }) });
     const result = await res.json();
-
     if (result.success) {
       setRewards(prev => prev.map(r => r.id === id ? { ...r, is_active: true } : r));
       showMessage('Reward reactivated!');
@@ -294,109 +324,77 @@ export default function SettingsPage() {
     setEditRewardCost(reward.star_cost.toString());
   }
 
-  // Reset
   async function saveResetSchedule(value: string) {
     setResetSchedule(value);
-    const res = await fetch('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update_reset_schedule', value }),
-    });
+    const res = await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'update_reset_schedule', value }) });
     const result = await res.json();
     showMessage(result.success ? 'Reset schedule updated!' : `Error: ${result.error}`);
   }
 
   async function performReset() {
-    setResetting(true);
-    setShowResetConfirm(false);
-    const res = await fetch('/api/reset', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ confirm: true }),
-    });
+    setResetting(true); setShowResetConfirm(false);
+    const res = await fetch('/api/reset', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ confirm: true }) });
     const result = await res.json();
     setResetting(false);
-
-    if (result.success) {
-      setLastResetAt(new Date().toISOString());
-      showMessage('Points reset successfully!');
-    } else {
-      showMessage(`Error: ${result.error}`);
-    }
+    if (result.success) { setLastResetAt(new Date().toISOString()); showMessage('Points reset successfully!'); }
+    else { showMessage(`Error: ${result.error}`); }
   }
 
   async function savePin(kidId: string) {
     const pin = kidPins[kidId];
-    if (!pin || !/^\d{4}$/.test(pin)) {
-      showMessage('PIN must be exactly 4 digits');
-      return;
-    }
+    if (!pin || !/^\d{4}$/.test(pin)) { showMessage('PIN must be exactly 4 digits'); return; }
     setSavingPin(kidId);
-    const res = await fetch('/api/kids', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'set_pin', kid_id: kidId, pin }),
-    });
+    const res = await fetch('/api/kids', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'set_pin', kid_id: kidId, pin }) });
     const result = await res.json();
     setSavingPin(null);
     if (result.success) {
       setKidsList(prev => prev.map(k => k.id === kidId ? { ...k, has_pin: true } : k));
       setKidPins(prev => ({ ...prev, [kidId]: '' }));
       showMessage('PIN saved!');
-    } else {
-      showMessage(`Error: ${result.error}`);
-    }
+    } else { showMessage(`Error: ${result.error}`); }
   }
 
   if (loading) {
     return (
-      <div className="text-center py-12">
-        <div className="text-4xl mb-4">Loading settings...</div>
+      <div className="text-center" style={{ padding: 48 }}>
+        <div style={{ fontSize: 40, marginBottom: 12 }}>&#x23F3;</div>
+        <div style={{ color: 'var(--text-secondary)' }}>Loading settings...</div>
       </div>
     );
   }
 
   if (!data) {
-    return (
-      <div className="text-center py-12 text-red-600">Failed to load settings</div>
-    );
+    return <div className="text-center" style={{ padding: 48, color: 'var(--accent-red)' }}>Failed to load settings</div>;
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {message && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
+        <div style={{
+          background: 'rgba(0, 176, 255, 0.15)',
+          border: '1px solid rgba(0, 176, 255, 0.3)',
+          color: 'var(--accent-blue)',
+          padding: '12px 16px',
+          borderRadius: 6,
+          fontSize: 14,
+        }}>
           {message}
         </div>
       )}
 
       {/* Profile */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Profile</h2>
-        <div className="space-y-4">
+      <div style={panelStyle}>
+        <h2 style={sectionTitleStyle}>Profile</h2>
+        <div className="space-y-4" style={{ marginTop: 12 }}>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="text"
-              value={data.parent.email}
-              disabled
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 bg-gray-50 text-gray-500"
-            />
+            <label style={labelStyle}>Email</label>
+            <input type="text" value={data.parent.email} disabled style={{ ...inputStyle, opacity: 0.5, cursor: 'not-allowed' }} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Display Name</label>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                value={displayName}
-                onChange={e => setDisplayName(e.target.value)}
-                className="block flex-1 rounded-md border border-gray-300 px-3 py-2"
-              />
-              <button
-                onClick={saveDisplayName}
-                disabled={saving || displayName === data.parent.display_name}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
-              >
+            <label style={labelStyle}>Display Name</label>
+            <div className="flex gap-2">
+              <input type="text" value={displayName} onChange={e => setDisplayName(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+              <button onClick={saveDisplayName} disabled={saving || displayName === data.parent.display_name} style={{ ...btnPrimary, opacity: (saving || displayName === data.parent.display_name) ? 0.5 : 1 }}>
                 Save
               </button>
             </div>
@@ -405,95 +403,69 @@ export default function SettingsPage() {
       </div>
 
       {/* Family Invite Code */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Family Invite Code</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Share this code with your kids so they can link their Telegram chat to your family using <code className="bg-gray-100 px-1 rounded">/join {inviteCode || '...'}</code>
+      <div style={panelStyle}>
+        <h2 style={sectionTitleStyle}>Invite Code</h2>
+        <p style={sectionDescStyle}>
+          Share this code with your kids so they can link their Telegram chat using <code style={{ background: 'var(--bg-dark)', padding: '2px 6px', borderRadius: 4, fontSize: 12 }}>/join {inviteCode || '...'}</code>
         </p>
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center gap-3">
           {inviteCode ? (
             <>
-              <span className="text-2xl font-mono font-bold tracking-widest bg-gray-50 px-4 py-2 rounded-lg border border-gray-200">
+              <span style={{
+                fontFamily: "'Silkscreen', monospace", fontSize: 20, fontWeight: 700,
+                letterSpacing: 3, background: 'var(--bg-dark)',
+                padding: '8px 16px', borderRadius: 8, border: '2px solid var(--border-color)',
+                color: 'var(--accent-green)',
+              }}>
                 {inviteCode}
               </span>
-              <button
-                onClick={copyInviteCode}
-                className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm"
-              >
-                Copy
-              </button>
+              <button onClick={copyInviteCode} style={btnPrimary}>Copy</button>
             </>
           ) : (
-            <span className="text-sm text-gray-500 py-2">No invite code yet.</span>
+            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No invite code yet.</span>
           )}
-          <button
-            onClick={regenerateInviteCode}
-            disabled={regenerating}
-            className="px-3 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50 text-sm"
-          >
+          <button onClick={regenerateInviteCode} disabled={regenerating} style={{ ...btnSecondary, opacity: regenerating ? 0.5 : 1 }}>
             {regenerating ? 'Generating...' : inviteCode ? 'Regenerate' : 'Generate'}
           </button>
         </div>
       </div>
 
       {/* Rewards Catalog */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Rewards Catalog</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Define rewards that kids can redeem their stars for via Telegram.
-        </p>
+      <div style={panelStyle}>
+        <h2 style={sectionTitleStyle}>Rewards Catalog</h2>
+        <p style={sectionDescStyle}>Define rewards that kids can redeem their stars for via Telegram.</p>
 
-        {/* Existing rewards */}
         {rewards.length > 0 ? (
-          <div className="space-y-2 mb-6">
+          <div className="space-y-2" style={{ marginBottom: 20 }}>
             {rewards.map(reward => (
-              <div key={reward.id} className={`flex items-center justify-between rounded-lg px-4 py-3 ${reward.is_active ? 'bg-gray-50' : 'bg-gray-100 opacity-60'}`}>
+              <div key={reward.id} className="flex items-center justify-between" style={{
+                borderRadius: 8, padding: '10px 14px',
+                background: reward.is_active ? 'var(--bg-dark)' : 'var(--bg-dark)',
+                border: '1px solid var(--border-color)',
+                opacity: reward.is_active ? 1 : 0.5,
+              }}>
                 {editingReward === reward.id ? (
-                  <div className="flex items-end space-x-2 flex-1">
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={editRewardName}
-                        onChange={e => setEditRewardName(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 px-3 py-1 text-sm"
-                        placeholder="Reward name"
-                      />
-                    </div>
-                    <div className="flex-1">
-                      <input
-                        type="text"
-                        value={editRewardDesc}
-                        onChange={e => setEditRewardDesc(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 px-3 py-1 text-sm"
-                        placeholder="Description"
-                      />
-                    </div>
-                    <div className="w-20">
-                      <input
-                        type="number"
-                        value={editRewardCost}
-                        onChange={e => setEditRewardCost(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 px-3 py-1 text-sm"
-                        min="1"
-                      />
-                    </div>
-                    <button onClick={() => updateReward(reward.id)} className="text-sm text-blue-600 hover:text-blue-800">Save</button>
-                    <button onClick={() => setEditingReward(null)} className="text-sm text-gray-600 hover:text-gray-800">Cancel</button>
+                  <div className="flex items-end gap-2" style={{ flex: 1 }}>
+                    <input type="text" value={editRewardName} onChange={e => setEditRewardName(e.target.value)} placeholder="Name" style={{ ...inputStyle, flex: 1, padding: '6px 10px', fontSize: 13 }} />
+                    <input type="text" value={editRewardDesc} onChange={e => setEditRewardDesc(e.target.value)} placeholder="Description" style={{ ...inputStyle, flex: 1, padding: '6px 10px', fontSize: 13 }} />
+                    <input type="number" value={editRewardCost} onChange={e => setEditRewardCost(e.target.value)} min="1" style={{ ...inputStyle, width: 70, padding: '6px 10px', fontSize: 13 }} />
+                    <button onClick={() => updateReward(reward.id)} style={{ fontSize: 12, color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Save</button>
+                    <button onClick={() => setEditingReward(null)} style={{ fontSize: 12, color: 'var(--text-secondary)', background: 'none', border: 'none', cursor: 'pointer' }}>Cancel</button>
                   </div>
                 ) : (
                   <>
-                    <div>
-                      <span className="text-sm font-medium text-gray-900">{reward.name}</span>
-                      {reward.description && <span className="text-sm text-gray-500 ml-2">({reward.description})</span>}
-                      <span className="text-sm font-bold text-yellow-600 ml-2">{reward.star_cost} stars</span>
-                      {!reward.is_active && <span className="text-xs text-red-500 ml-2">(inactive)</span>}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{reward.name}</span>
+                      {reward.description && <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>({reward.description})</span>}
+                      <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--accent-yellow)' }}>{reward.star_cost} stars</span>
+                      {!reward.is_active && <span style={{ fontSize: 11, color: 'var(--accent-red)' }}>(inactive)</span>}
                     </div>
-                    <div className="flex space-x-2">
-                      <button onClick={() => startEditing(reward)} className="text-sm text-blue-600 hover:text-blue-800">Edit</button>
+                    <div className="flex gap-2">
+                      <button onClick={() => startEditing(reward)} style={{ fontSize: 12, color: 'var(--accent-blue)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
                       {reward.is_active ? (
-                        <button onClick={() => deleteReward(reward.id)} className="text-sm text-red-600 hover:text-red-800">Remove</button>
+                        <button onClick={() => deleteReward(reward.id)} style={{ fontSize: 12, color: 'var(--accent-red)', background: 'none', border: 'none', cursor: 'pointer' }}>Remove</button>
                       ) : (
-                        <button onClick={() => reactivateReward(reward.id)} className="text-sm text-green-600 hover:text-green-800">Reactivate</button>
+                        <button onClick={() => reactivateReward(reward.id)} style={{ fontSize: 12, color: 'var(--accent-green)', background: 'none', border: 'none', cursor: 'pointer' }}>Reactivate</button>
                       )}
                     </div>
                   </>
@@ -502,140 +474,92 @@ export default function SettingsPage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500 mb-6">No rewards configured yet.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>No rewards configured yet.</p>
         )}
 
-        {/* Add reward form */}
-        <div className="flex items-end space-x-2">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-            <input
-              type="text"
-              value={newRewardName}
-              onChange={e => setNewRewardName(e.target.value)}
-              placeholder="e.g. Screen Time (30 min)"
-              className="block w-full rounded-md border border-gray-300 px-3 py-2"
-            />
+        <div className="flex items-end gap-2">
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Name</label>
+            <input type="text" value={newRewardName} onChange={e => setNewRewardName(e.target.value)} placeholder="e.g. Screen Time (30 min)" style={inputStyle} />
           </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <input
-              type="text"
-              value={newRewardDesc}
-              onChange={e => setNewRewardDesc(e.target.value)}
-              placeholder="Optional description"
-              className="block w-full rounded-md border border-gray-300 px-3 py-2"
-            />
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>Description</label>
+            <input type="text" value={newRewardDesc} onChange={e => setNewRewardDesc(e.target.value)} placeholder="Optional" style={inputStyle} />
           </div>
-          <div className="w-24">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Stars</label>
-            <input
-              type="number"
-              value={newRewardCost}
-              onChange={e => setNewRewardCost(e.target.value)}
-              placeholder="5"
-              min="1"
-              className="block w-full rounded-md border border-gray-300 px-3 py-2"
-            />
+          <div style={{ width: 90 }}>
+            <label style={labelStyle}>Stars</label>
+            <input type="number" value={newRewardCost} onChange={e => setNewRewardCost(e.target.value)} placeholder="5" min="1" style={inputStyle} />
           </div>
-          <button
-            onClick={addReward}
-            disabled={!newRewardName.trim() || !newRewardCost || parseInt(newRewardCost) < 1}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm"
-          >
+          <button onClick={addReward} disabled={!newRewardName.trim() || !newRewardCost || parseInt(newRewardCost) < 1} style={{ ...btnPrimary, opacity: (!newRewardName.trim() || !newRewardCost) ? 0.5 : 1 }}>
             Add
           </button>
         </div>
       </div>
 
       {/* Reset Schedule */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Points Reset Schedule</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Automatically reset all kids&apos; star balances on a schedule to keep motivation fresh.
-        </p>
-
+      <div style={panelStyle}>
+        <h2 style={sectionTitleStyle}>Points Reset</h2>
+        <p style={sectionDescStyle}>Automatically reset star balances on a schedule.</p>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Schedule</label>
-            <select
-              value={resetSchedule}
-              onChange={e => saveResetSchedule(e.target.value)}
-              className="rounded-md border border-gray-300 px-3 py-2"
-            >
+            <label style={labelStyle}>Schedule</label>
+            <select value={resetSchedule} onChange={e => saveResetSchedule(e.target.value)} style={{ ...inputStyle, width: 'auto' }}>
               <option value="none">None (manual only)</option>
               <option value="monthly">Monthly</option>
               <option value="yearly">Yearly</option>
             </select>
           </div>
-
           {lastResetAt && (
-            <p className="text-sm text-gray-500">
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
               Last reset: {new Date(lastResetAt).toLocaleDateString()} {new Date(lastResetAt).toLocaleTimeString()}
             </p>
           )}
-
           <div>
             {showResetConfirm ? (
-              <div className="flex items-center space-x-3">
-                <span className="text-sm text-red-600 font-medium">Are you sure? This will zero out all balances.</span>
-                <button
-                  onClick={performReset}
-                  disabled={resetting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 text-sm"
-                >
+              <div className="flex items-center gap-3">
+                <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-red)' }}>Are you sure? This will zero out all balances.</span>
+                <button onClick={performReset} disabled={resetting} style={{ ...btnDanger, opacity: resetting ? 0.5 : 1 }}>
                   {resetting ? 'Resetting...' : 'Yes, Reset Now'}
                 </button>
-                <button
-                  onClick={() => setShowResetConfirm(false)}
-                  className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 text-sm"
-                >
-                  Cancel
-                </button>
+                <button onClick={() => setShowResetConfirm(false)} style={btnSecondary}>Cancel</button>
               </div>
             ) : (
-              <button
-                onClick={() => setShowResetConfirm(true)}
-                className="px-4 py-2 bg-red-100 text-red-700 rounded-md hover:bg-red-200 text-sm"
-              >
-                Reset Now
-              </button>
+              <button onClick={() => setShowResetConfirm(true)} style={btnDanger}>Reset Now</button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Kid Redemption PINs */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Redemption PINs</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Set a 4-digit PIN for each kid to verify their identity when redeeming rewards via Telegram.
-        </p>
+      {/* Redemption PINs */}
+      <div style={panelStyle}>
+        <h2 style={sectionTitleStyle}>Redemption PINs</h2>
+        <p style={sectionDescStyle}>Set a 4-digit PIN for each kid to verify identity when redeeming.</p>
         {kidsList.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {kidsList.map(kid => (
-              <div key={kid.id} className="flex items-center space-x-3 bg-gray-50 rounded-lg px-4 py-3">
-                <div className="flex-1">
-                  <span className="text-sm font-medium text-gray-900">{kid.display_name}</span>
-                  <span className="text-sm text-gray-500 ml-2">@{kid.username}</span>
-                  {kid.has_pin && <span className="text-xs text-green-600 ml-2">(PIN set)</span>}
-                  {!kid.has_pin && <span className="text-xs text-orange-500 ml-2">(no PIN)</span>}
+              <div key={kid.id} className="flex items-center gap-3" style={{
+                background: 'var(--bg-dark)', borderRadius: 8, padding: '10px 14px',
+                border: '1px solid var(--border-color)',
+              }}>
+                <div style={{ flex: 1 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{kid.display_name}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 8 }}>@{kid.username}</span>
+                  {kid.has_pin && <span style={{ fontSize: 11, color: 'var(--accent-green)', marginLeft: 8 }}>(PIN set)</span>}
+                  {!kid.has_pin && <span style={{ fontSize: 11, color: 'var(--accent-orange)', marginLeft: 8 }}>(no PIN)</span>}
                 </div>
                 <input
-                  type="password"
-                  maxLength={4}
-                  placeholder="4-digit PIN"
+                  type="password" maxLength={4} placeholder="4-digit PIN"
                   value={kidPins[kid.id] || ''}
                   onChange={e => {
                     const val = e.target.value.replace(/\D/g, '').slice(0, 4);
                     setKidPins(prev => ({ ...prev, [kid.id]: val }));
                   }}
-                  className="w-28 rounded-md border border-gray-300 px-3 py-1 text-sm text-center tracking-widest"
+                  style={{ ...inputStyle, width: 100, textAlign: 'center', letterSpacing: 4, padding: '6px 10px', fontSize: 14 }}
                 />
                 <button
                   onClick={() => savePin(kid.id)}
                   disabled={savingPin === kid.id || !kidPins[kid.id] || kidPins[kid.id]?.length !== 4}
-                  className="px-3 py-1 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  style={{ ...btnPrimary, opacity: (savingPin === kid.id || !kidPins[kid.id] || kidPins[kid.id]?.length !== 4) ? 0.5 : 1, fontSize: 12 }}
                 >
                   {savingPin === kid.id ? 'Saving...' : kid.has_pin ? 'Change' : 'Set PIN'}
                 </button>
@@ -643,96 +567,72 @@ export default function SettingsPage() {
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500">No kids found. Add kids to your household first.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>No kids found.</p>
         )}
       </div>
 
       {/* Kid Assignments */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Kid Assignments</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Select which kids you can see in the dashboard.
-        </p>
-        <div className="space-y-2 mb-4">
+      <div style={panelStyle}>
+        <h2 style={sectionTitleStyle}>Kid Assignments</h2>
+        <p style={sectionDescStyle}>Select which kids you can see in the dashboard.</p>
+        <div className="space-y-2" style={{ marginBottom: 16 }}>
           {data.allKids.map(kid => (
-            <label key={kid.id} className="flex items-center space-x-3 cursor-pointer">
+            <label key={kid.id} className="flex items-center gap-3" style={{ cursor: 'pointer' }}>
               <input
                 type="checkbox"
                 checked={assignedKids.has(kid.id)}
                 onChange={() => toggleKid(kid.id)}
-                className="h-4 w-4 text-blue-600 rounded border-gray-300"
+                style={{ accentColor: 'var(--accent-green)' }}
               />
-              <span className="text-gray-900">{kid.display_name}</span>
-              <span className="text-sm text-gray-500">@{kid.username}</span>
+              <span style={{ color: 'var(--text-primary)', fontSize: 14 }}>{kid.display_name}</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: 12 }}>@{kid.username}</span>
             </label>
           ))}
         </div>
-        <button
-          onClick={saveKidAssignments}
-          disabled={saving}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 text-sm"
-        >
+        <button onClick={saveKidAssignments} disabled={saving} style={{ ...btnPrimary, opacity: saving ? 0.5 : 1 }}>
           Save Assignments
         </button>
       </div>
 
       {/* Notification Contacts */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Notification Contacts</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          Add your Telegram or WhatsApp ID to receive notifications when kids submit achievements.
-        </p>
+      <div style={panelStyle}>
+        <h2 style={sectionTitleStyle}>Notifications</h2>
+        <p style={sectionDescStyle}>Add your Telegram or WhatsApp ID to receive notifications.</p>
 
-        {/* Existing contacts */}
         {data.contacts.length > 0 ? (
-          <div className="space-y-2 mb-6">
+          <div className="space-y-2" style={{ marginBottom: 20 }}>
             {data.contacts.map(contact => (
-              <div key={contact.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">
+              <div key={contact.id} className="flex items-center justify-between" style={{
+                background: 'var(--bg-dark)', borderRadius: 8, padding: '10px 14px',
+                border: '1px solid var(--border-color)',
+              }}>
                 <div>
-                  <span className="text-sm font-medium text-gray-900 capitalize">{contact.platform}</span>
-                  <span className="text-sm text-gray-600 ml-2">{contact.platform_user_id}</span>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)', textTransform: 'capitalize' }}>{contact.platform}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text-secondary)', marginLeft: 8 }}>{contact.platform_user_id}</span>
                 </div>
-                <button
-                  onClick={() => deleteContact(contact.id)}
-                  className="text-sm text-red-600 hover:text-red-800"
-                >
+                <button onClick={() => deleteContact(contact.id)} style={{ fontSize: 12, color: 'var(--accent-red)', background: 'none', border: 'none', cursor: 'pointer', fontWeight: 600 }}>
                   Remove
                 </button>
               </div>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-gray-500 mb-6">No contacts configured yet.</p>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>No contacts configured.</p>
         )}
 
-        {/* Add contact form */}
-        <div className="flex items-end space-x-2">
+        <div className="flex items-end gap-2">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Platform</label>
-            <select
-              value={newPlatform}
-              onChange={e => setNewPlatform(e.target.value as 'telegram' | 'whatsapp')}
-              className="rounded-md border border-gray-300 px-3 py-2"
-            >
+            <label style={labelStyle}>Platform</label>
+            <select value={newPlatform} onChange={e => setNewPlatform(e.target.value as 'telegram' | 'whatsapp')} style={{ ...inputStyle, width: 'auto' }}>
               <option value="telegram">Telegram</option>
               <option value="whatsapp">WhatsApp</option>
             </select>
           </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-1">User/Chat ID</label>
-            <input
-              type="text"
-              value={newPlatformUserId}
-              onChange={e => setNewPlatformUserId(e.target.value)}
-              placeholder="e.g. 123456789"
-              className="block w-full rounded-md border border-gray-300 px-3 py-2"
-            />
+          <div style={{ flex: 1 }}>
+            <label style={labelStyle}>User/Chat ID</label>
+            <input type="text" value={newPlatformUserId} onChange={e => setNewPlatformUserId(e.target.value)} placeholder="e.g. 123456789" style={inputStyle} />
           </div>
-          <button
-            onClick={addContact}
-            disabled={!newPlatformUserId.trim()}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 text-sm"
-          >
+          <button onClick={addContact} disabled={!newPlatformUserId.trim()} style={{ ...btnPrimary, opacity: !newPlatformUserId.trim() ? 0.5 : 1 }}>
             Add
           </button>
         </div>

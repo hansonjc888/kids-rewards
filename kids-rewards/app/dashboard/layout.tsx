@@ -11,10 +11,10 @@ interface ParentProfile {
 }
 
 const navItems = [
-  { href: '/dashboard', label: 'Dashboard' },
-  { href: '/dashboard/submissions', label: 'Submissions' },
-  { href: '/dashboard/leaderboard', label: 'Leaderboard' },
-  { href: '/dashboard/settings', label: 'Settings' },
+  { href: '/dashboard', label: 'Dashboard', icon: '&#9776;' },
+  { href: '/dashboard/submissions', label: 'Submissions', icon: '&#128203;' },
+  { href: '/dashboard/leaderboard', label: 'Leaderboard', icon: '&#127942;' },
+  { href: '/dashboard/settings', label: 'Settings', icon: '&#9881;' },
 ];
 
 export default function DashboardLayout({
@@ -51,53 +51,113 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen" style={{ background: 'var(--bg-dark)' }}>
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <h1 className="text-3xl font-bold text-gray-900">Kids Rewards Dashboard</h1>
-          <div className="flex items-center space-x-4">
-            {parent && (
-              <span className="text-sm text-gray-600">
-                {parent.display_name} ({parent.household_name})
-              </span>
-            )}
-            <button
-              onClick={handleSignOut}
-              className="text-sm text-gray-500 hover:text-gray-700 px-3 py-1 rounded border border-gray-300 hover:border-gray-400"
-            >
-              Sign Out
-            </button>
-          </div>
+      <header style={{
+        background: 'linear-gradient(135deg, #0f3460, #16213e)',
+        borderBottom: '3px solid var(--accent-green)',
+        padding: '0 24px',
+        height: '64px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+      }}>
+        <div className="flex items-center gap-3">
+          <div style={{
+            width: 36, height: 36,
+            background: 'var(--accent-green)',
+            borderRadius: 6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 20,
+            boxShadow: '0 0 20px rgba(0, 230, 118, 0.3)',
+            animation: 'logoPulse 4s ease-in-out infinite',
+          }}>&#9733;</div>
+          <span style={{
+            fontFamily: "'Silkscreen', monospace",
+            fontSize: 18,
+            fontWeight: 700,
+            letterSpacing: 1,
+            color: 'var(--text-primary)',
+          }}>KIDS REWARDS</span>
+        </div>
+        <div className="flex items-center gap-4">
+          {parent && (
+            <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+              {parent.display_name} &middot; {parent.household_name}
+            </span>
+          )}
+          <button
+            onClick={handleSignOut}
+            style={{
+              fontFamily: "'Rubik', sans-serif",
+              fontSize: 12,
+              fontWeight: 600,
+              color: 'var(--text-secondary)',
+              background: 'transparent',
+              border: '2px solid var(--border-color)',
+              borderRadius: 6,
+              padding: '6px 14px',
+              cursor: 'pointer',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'var(--accent-red)';
+              e.currentTarget.style.color = 'var(--accent-red)';
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'var(--border-color)';
+              e.currentTarget.style.color = 'var(--text-secondary)';
+            }}
+          >
+            Sign Out
+          </button>
         </div>
       </header>
 
       {/* Navigation */}
-      <nav className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`border-b-2 py-4 px-1 text-sm font-medium ${
-                    isActive
-                      ? 'border-blue-500 text-blue-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
+      <nav style={{
+        background: 'var(--bg-card)',
+        borderBottom: '2px solid var(--border-color)',
+        padding: '0 24px',
+        display: 'flex',
+        gap: 0,
+        overflowX: 'auto',
+      }}>
+        {navItems.map((item) => {
+          const isActive = pathname === item.href;
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              style={{
+                fontFamily: "'Rubik', sans-serif",
+                fontSize: 13,
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: 1,
+                color: isActive ? 'var(--accent-green)' : 'var(--text-secondary)',
+                textDecoration: 'none',
+                padding: '14px 20px',
+                borderBottom: `3px solid ${isActive ? 'var(--accent-green)' : 'transparent'}`,
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {item.label}
+            </Link>
+          );
+        })}
       </nav>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px' }}>
         {children}
       </main>
     </div>

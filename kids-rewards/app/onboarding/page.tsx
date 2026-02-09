@@ -68,78 +68,107 @@ export default function OnboardingPage() {
     router.refresh();
   }
 
+  const inputStyle = {
+    width: '100%',
+    borderRadius: 6,
+    border: '2px solid var(--border-color)',
+    padding: '10px 14px',
+    background: 'var(--bg-dark)',
+    color: 'var(--text-primary)',
+    fontSize: 14,
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg-dark)' }}>
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Welcome!</h1>
-          <p className="text-gray-600">
-            {step === 1
-              ? "Let's set up your family"
-              : 'Add your kids'}
+          <h1 style={{
+            fontFamily: "'Silkscreen', monospace",
+            fontSize: 24,
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            marginBottom: 8,
+          }}>Welcome!</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+            {step === 1 ? "Let's set up your family" : 'Add your kids'}
           </p>
-          <div className="flex justify-center mt-4 space-x-2">
-            <div className={`h-2 w-16 rounded-full ${step >= 1 ? 'bg-blue-500' : 'bg-gray-300'}`} />
-            <div className={`h-2 w-16 rounded-full ${step >= 2 ? 'bg-blue-500' : 'bg-gray-300'}`} />
+          <div className="flex justify-center mt-4 gap-2">
+            <div style={{
+              height: 6, width: 64, borderRadius: 3,
+              background: step >= 1 ? 'var(--accent-green)' : 'var(--border-color)',
+              boxShadow: step >= 1 ? '0 0 8px var(--accent-green)' : 'none',
+            }} />
+            <div style={{
+              height: 6, width: 64, borderRadius: 3,
+              background: step >= 2 ? 'var(--accent-green)' : 'var(--border-color)',
+              boxShadow: step >= 2 ? '0 0 8px var(--accent-green)' : 'none',
+            }} />
           </div>
         </div>
 
         {step === 1 && (
-          <form onSubmit={handleNextStep} className="bg-white rounded-lg shadow p-8 space-y-6">
+          <form onSubmit={handleNextStep} style={{
+            background: 'var(--bg-card)',
+            border: '2px solid var(--border-color)',
+            borderRadius: 10,
+            padding: 32,
+          }} className="space-y-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                {error}
-              </div>
+              <div style={{
+                background: 'rgba(255, 82, 82, 0.15)',
+                border: '1px solid rgba(255, 82, 82, 0.3)',
+                color: 'var(--accent-red)',
+                padding: '12px 16px',
+                borderRadius: 6,
+                fontSize: 14,
+              }}>{error}</div>
             )}
 
             <div>
-              <label htmlFor="familyName" className="block text-sm font-medium text-gray-700 mb-1">
+              <label htmlFor="familyName" style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
                 Family Name
               </label>
-              <input
-                id="familyName"
-                type="text"
-                value={familyName}
-                onChange={(e) => setFamilyName(e.target.value)}
-                required
-                className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                placeholder='e.g. "Smith Family"'
-              />
+              <input id="familyName" type="text" value={familyName} onChange={(e) => setFamilyName(e.target.value)} required placeholder='e.g. "Smith Family"' style={inputStyle} />
             </div>
 
-            <button
-              type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
+            <button type="submit" style={{
+              width: '100%', padding: '12px',
+              background: 'var(--accent-green)', color: '#1a1a2e',
+              fontWeight: 700, fontSize: 14, borderRadius: 6, border: 'none',
+              cursor: 'pointer', textTransform: 'uppercase', letterSpacing: 0.5,
+            }}>
               Next
             </button>
           </form>
         )}
 
         {step === 2 && (
-          <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-8 space-y-6">
+          <form onSubmit={handleSubmit} style={{
+            background: 'var(--bg-card)',
+            border: '2px solid var(--border-color)',
+            borderRadius: 10,
+            padding: 32,
+          }} className="space-y-6">
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-                {error}
-              </div>
+              <div style={{
+                background: 'rgba(255, 82, 82, 0.15)',
+                border: '1px solid rgba(255, 82, 82, 0.3)',
+                color: 'var(--accent-red)',
+                padding: '12px 16px',
+                borderRadius: 6,
+                fontSize: 14,
+              }}>{error}</div>
             )}
 
             <div className="space-y-3">
               {kids.map((kid, index) => (
-                <div key={index} className="flex items-center space-x-2">
-                  <input
-                    type="text"
-                    value={kid.name}
-                    onChange={(e) => updateKidName(index, e.target.value)}
-                    className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                    placeholder={`Kid ${index + 1} name`}
-                  />
+                <div key={index} className="flex items-center gap-2">
+                  <input type="text" value={kid.name} onChange={(e) => updateKidName(index, e.target.value)} placeholder={`Kid ${index + 1} name`} style={inputStyle} />
                   {kids.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeKid(index)}
-                      className="text-red-500 hover:text-red-700 px-2 py-2 text-sm font-medium"
-                    >
+                    <button type="button" onClick={() => removeKid(index)} style={{
+                      padding: '8px 12px', fontSize: 13, fontWeight: 600,
+                      color: 'var(--accent-red)', background: 'transparent', border: 'none', cursor: 'pointer',
+                    }}>
                       Remove
                     </button>
                   )}
@@ -147,27 +176,32 @@ export default function OnboardingPage() {
               ))}
             </div>
 
-            <button
-              type="button"
-              onClick={addKid}
-              className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
+            <button type="button" onClick={addKid} style={{
+              width: '100%', padding: '10px',
+              background: 'transparent', color: 'var(--text-secondary)',
+              border: '2px solid var(--border-color)', borderRadius: 6,
+              fontWeight: 600, fontSize: 13, cursor: 'pointer',
+            }}>
               + Add Another Kid
             </button>
 
-            <div className="flex space-x-3">
-              <button
-                type="button"
-                onClick={() => { setStep(1); setError(''); }}
-                className="flex-1 flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
+            <div className="flex gap-3">
+              <button type="button" onClick={() => { setStep(1); setError(''); }} style={{
+                flex: 1, padding: '12px',
+                background: 'transparent', color: 'var(--text-secondary)',
+                border: '2px solid var(--border-color)', borderRadius: 6,
+                fontWeight: 600, fontSize: 14, cursor: 'pointer',
+              }}>
                 Back
               </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex-1 flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
+              <button type="submit" disabled={loading} style={{
+                flex: 1, padding: '12px',
+                background: 'var(--accent-green)', color: '#1a1a2e',
+                fontWeight: 700, fontSize: 14, borderRadius: 6, border: 'none',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.5 : 1,
+                textTransform: 'uppercase', letterSpacing: 0.5,
+              }}>
                 {loading ? 'Setting up...' : 'Finish Setup'}
               </button>
             </div>

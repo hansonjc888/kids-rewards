@@ -51,103 +51,122 @@ export default function SignupPage() {
     setEmailSent(true);
   }
 
+  const inputStyle = {
+    width: '100%',
+    borderRadius: 6,
+    border: '2px solid var(--border-color)',
+    padding: '10px 14px',
+    background: 'var(--bg-dark)',
+    color: 'var(--text-primary)',
+    fontSize: 14,
+  };
+
+  const labelStyle = {
+    display: 'block' as const,
+    fontSize: 12,
+    fontWeight: 600 as const,
+    color: 'var(--text-secondary)',
+    marginBottom: 6,
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg-dark)' }}>
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">Kids Rewards</h1>
-          <p className="text-gray-600">Create an account to get started</p>
+          <div style={{
+            width: 48, height: 48,
+            background: 'var(--accent-blue)',
+            borderRadius: 8,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 24,
+            margin: '0 auto 16px',
+            boxShadow: '0 0 20px rgba(0, 176, 255, 0.3)',
+          }}>&#9733;</div>
+          <h1 style={{
+            fontFamily: "'Silkscreen', monospace",
+            fontSize: 24,
+            fontWeight: 700,
+            color: 'var(--text-primary)',
+            marginBottom: 8,
+          }}>KIDS REWARDS</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Create an account to get started</p>
         </div>
 
         {emailSent ? (
-          <div className="bg-white rounded-lg shadow p-8 text-center space-y-4">
-            <div className="text-green-600 text-5xl">✉️</div>
-            <h2 className="text-xl font-semibold text-gray-900">Check your email</h2>
-            <p className="text-gray-600">
-              We sent a confirmation link to <strong>{email}</strong>. Click the link to verify your account, then you&apos;ll be redirected to set up your family.
+          <div style={{
+            background: 'var(--bg-card)',
+            border: '2px solid var(--border-color)',
+            borderRadius: 10,
+            padding: 32,
+            textAlign: 'center',
+          }} className="space-y-4">
+            <div style={{ fontSize: 48 }}>&#9993;&#65039;</div>
+            <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)' }}>Check your email</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+              We sent a confirmation link to <strong style={{ color: 'var(--accent-green)' }}>{email}</strong>. Click the link to verify your account.
             </p>
           </div>
         ) : (
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-8 space-y-6">
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
+          <form onSubmit={handleSubmit} style={{
+            background: 'var(--bg-card)',
+            border: '2px solid var(--border-color)',
+            borderRadius: 10,
+            padding: 32,
+          }} className="space-y-5">
+            {error && (
+              <div style={{
+                background: 'rgba(255, 82, 82, 0.15)',
+                border: '1px solid rgba(255, 82, 82, 0.3)',
+                color: 'var(--accent-red)',
+                padding: '12px 16px',
+                borderRadius: 6,
+                fontSize: 14,
+              }}>
+                {error}
+              </div>
+            )}
+
+            <div>
+              <label htmlFor="displayName" style={labelStyle}>Your Name</label>
+              <input id="displayName" type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} required placeholder="e.g. Mom, Dad" style={inputStyle} />
             </div>
-          )}
 
-          <div>
-            <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-1">
-              Your Name
-            </label>
-            <input
-              id="displayName"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              required
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="e.g. Mom, Dad"
-            />
-          </div>
+            <div>
+              <label htmlFor="email" style={labelStyle}>Email</label>
+              <input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="parent@example.com" style={inputStyle} />
+            </div>
 
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-              placeholder="parent@example.com"
-            />
-          </div>
+            <div>
+              <label htmlFor="password" style={labelStyle}>Password</label>
+              <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required style={inputStyle} />
+            </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
+            <div>
+              <label htmlFor="confirmPassword" style={labelStyle}>Confirm Password</label>
+              <input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required style={inputStyle} />
+            </div>
 
-          <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Confirm Password
-            </label>
-            <input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              required
-              className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-            />
-          </div>
+            <button type="submit" disabled={loading} style={{
+              width: '100%', padding: '12px',
+              background: 'var(--accent-green)', color: '#1a1a2e',
+              fontWeight: 700, fontSize: 14, borderRadius: 6, border: 'none',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              opacity: loading ? 0.5 : 1,
+              textTransform: 'uppercase', letterSpacing: 0.5,
+              boxShadow: '0 0 20px rgba(0, 230, 118, 0.2)',
+            }}>
+              {loading ? 'Creating account...' : 'Sign Up'}
+            </button>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Creating account...' : 'Sign Up'}
-          </button>
-
-          <p className="text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link href="/login" className="text-blue-600 hover:text-blue-500 font-medium">
-              Sign in
-            </Link>
-          </p>
-        </form>
+            <p className="text-center" style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+              Already have an account?{' '}
+              <Link href="/login" style={{ color: 'var(--accent-blue)', fontWeight: 600, textDecoration: 'none' }}>Sign in</Link>
+            </p>
+          </form>
         )}
       </div>
     </div>

@@ -271,21 +271,27 @@ export async function handleApproval(
     return { success: false, error: 'Stars must be between 1 and 3' };
   }
 
-  // Get submission with kid info
-  const { data: submission, error: fetchError } = await supabaseAdmin
+  // Atomically claim the submission by updating status from pending_review to approved.
+  // This prevents race conditions when two parents click approve simultaneously.
+  const { data: updatedRows, error: updateError } = await supabaseAdmin
     .from('submissions')
-    .select('*, kids(display_name, username)')
+    .update({ status: 'approved' })
     .eq('id', submissionId)
-    .single();
+    .in('status', ['pending_review', 'pending_identity'])
+    .select('*, kids(display_name, username)');
 
-  if (fetchError || !submission) {
-    return { success: false, error: 'Submission not found' };
+  if (updateError) {
+    console.error('   ❌ Error updating submission:', updateError);
+    return { success: false, error: 'Failed to update submission' };
   }
 
-  if (submission.status === 'approved') {
-    return { success: false, error: 'Submission already approved' };
+  // If no rows were updated, the submission was already approved/rejected
+  if (!updatedRows || updatedRows.length === 0) {
+    console.log(`   ⚠️ Submission ${submissionId} already processed, skipping`);
+    return { success: false, error: 'Submission already processed' };
   }
 
+  const submission = updatedRows[0];
   const kid = submission.kids as any;
 
   // Record approval
@@ -300,14 +306,13 @@ export async function handleApproval(
 
   if (approvalError) {
     console.error('   ❌ Error recording approval:', approvalError);
+    // Revert submission status since approval record failed
+    await supabaseAdmin
+      .from('submissions')
+      .update({ status: 'pending_review' })
+      .eq('id', submissionId);
     return { success: false, error: 'Failed to record approval' };
   }
-
-  // Update submission status
-  await supabaseAdmin
-    .from('submissions')
-    .update({ status: 'approved' })
-    .eq('id', submissionId);
 
   // Write to points ledger (append-only)
   await supabaseAdmin
@@ -345,27 +350,27 @@ export async function handleRejection(
 ): Promise<{ success: boolean; error?: string }> {
   console.log(`\n❌ Rejecting submission ${submissionId}`);
 
-  // Get submission with kid info
-  const { data: submission, error: fetchError } = await supabaseAdmin
-    .from('submissions')
-    .select('*, kids(display_name, username)')
-    .eq('id', submissionId)
-    .single();
-
-  if (fetchError || !submission) {
-    return { success: false, error: 'Submission not found' };
-  }
-
-  if (submission.status === 'rejected') {
-    return { success: false, error: 'Submission already rejected' };
-  }
-
-  // Update submission status
-  await supabaseAdmin
+  // Atomically claim the submission by updating status from pending to rejected.
+  // This prevents race conditions when two parents click simultaneously.
+  const { data: updatedRows, error: updateError } = await supabaseAdmin
     .from('submissions')
     .update({ status: 'rejected' })
-    .eq('id', submissionId);
+    .eq('id', submissionId)
+    .in('status', ['pending_review', 'pending_identity'])
+    .select('*, kids(display_name, username)');
 
+  if (updateError) {
+    console.error('   ❌ Error updating submission:', updateError);
+    return { success: false, error: 'Failed to update submission' };
+  }
+
+  // If no rows were updated, the submission was already approved/rejected
+  if (!updatedRows || updatedRows.length === 0) {
+    console.log(`   ⚠️ Submission ${submissionId} already processed, skipping`);
+    return { success: false, error: 'Submission already processed' };
+  }
+
+  const submission = updatedRows[0];
   const kid = submission.kids as any;
 
   // Notify kid via Telegram if provider is available
