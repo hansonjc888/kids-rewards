@@ -30,7 +30,6 @@ export default function LeaderboardPage() {
       const kidsData = await kidsRes.json();
       const statsData = await statsRes.json();
 
-      // Sort by stars
       kidsData.sort((a: Kid, b: Kid) => b.total_stars - a.total_stars);
 
       setKids(kidsData);
@@ -43,10 +42,10 @@ export default function LeaderboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex items-center justify-center py-20">
         <div className="text-center">
-          <div className="text-4xl mb-4">⏳</div>
-          <div className="text-gray-600">Loading leaderboard...</div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}>&#x23F3;</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Loading leaderboard...</div>
         </div>
       </div>
     );
@@ -54,118 +53,129 @@ export default function LeaderboardPage() {
 
   const maxStars = kids[0]?.total_stars || 1;
 
+  const rankStyles: Record<number, { border: string; rankBg: string; rankColor: string }> = {
+    1: { border: 'var(--accent-yellow)', rankBg: 'rgba(255, 214, 0, 0.2)', rankColor: 'var(--accent-yellow)' },
+    2: { border: '#b0bec5', rankBg: 'rgba(176, 190, 197, 0.2)', rankColor: '#b0bec5' },
+    3: { border: 'var(--accent-orange)', rankBg: 'rgba(255, 145, 0, 0.2)', rankColor: 'var(--accent-orange)' },
+  };
+
   return (
     <div>
-        {/* Leaderboard */}
-        <div className="bg-white rounded-lg shadow mb-8">
-          <div className="px-6 py-4 border-b">
-            <h2 className="text-2xl font-bold text-gray-900">🏆 Family Leaderboard</h2>
-          </div>
-          <div className="p-6">
-            <div className="space-y-4">
-              {kids.map((kid, index) => {
-                const rank = index + 1;
-                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
-                const percentage = (kid.total_stars / maxStars) * 100;
+      {/* Leaderboard */}
+      <div className="animate-fade-in delay-1" style={{
+        background: 'var(--bg-card)',
+        border: '2px solid var(--border-color)',
+        borderRadius: 10,
+        marginBottom: 24,
+        overflow: 'hidden',
+      }}>
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '2px solid var(--border-color)',
+          display: 'flex', alignItems: 'center', gap: 8,
+        }}>
+          <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent-yellow)', boxShadow: '0 0 8px var(--accent-yellow)', display: 'inline-block' }} />
+          <span style={{ fontFamily: "'Silkscreen', monospace", fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+            Leaderboard
+          </span>
+        </div>
+        <div style={{ padding: 20 }}>
+          {kids.map((kid, index) => {
+            const rank = index + 1;
+            const rs = rankStyles[rank] || { border: 'var(--border-color)', rankBg: 'rgba(255,255,255,0.05)', rankColor: 'var(--text-secondary)' };
+            const barPercent = (kid.total_stars / maxStars) * 100;
 
-                return (
-                  <div
-                    key={kid.id}
-                    className={`relative overflow-hidden rounded-lg border-2 transition-all ${
-                      rank === 1
-                        ? 'border-yellow-400 bg-yellow-50'
-                        : rank === 2
-                        ? 'border-gray-400 bg-gray-50'
-                        : rank === 3
-                        ? 'border-orange-400 bg-orange-50'
-                        : 'border-gray-200 bg-white'
-                    }`}
-                  >
-                    {/* Progress Background */}
-                    <div
-                      className={`absolute inset-y-0 left-0 transition-all ${
-                        rank === 1
-                          ? 'bg-yellow-200'
-                          : rank === 2
-                          ? 'bg-gray-200'
-                          : rank === 3
-                          ? 'bg-orange-200'
-                          : 'bg-blue-100'
-                      }`}
-                      style={{ width: `${percentage}%` }}
-                    />
+            return (
+              <div key={kid.id} className="flex items-center gap-4" style={{
+                padding: '12px 16px',
+                background: 'var(--bg-dark)',
+                border: `2px solid ${rs.border}`,
+                borderRadius: 8,
+                marginBottom: 10,
+                transition: 'all 0.2s',
+                boxShadow: rank === 1 ? '0 0 20px rgba(255, 214, 0, 0.15)' : 'none',
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: 6,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontFamily: "'Silkscreen', monospace", fontSize: 14, fontWeight: 700,
+                  background: rs.rankBg, color: rs.rankColor, flexShrink: 0,
+                }}>
+                  #{rank}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>{kid.display_name}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>@{kid.username}</div>
+                </div>
 
-                    {/* Content */}
-                    <div className="relative p-6 flex items-center justify-between">
-                      <div className="flex items-center space-x-6">
-                        {/* Rank */}
-                        <div className="flex-shrink-0 w-16 text-center">
-                          {medal ? (
-                            <span className="text-4xl">{medal}</span>
-                          ) : (
-                            <span className="text-3xl font-bold text-gray-400">#{rank}</span>
-                          )}
-                        </div>
-
-                        {/* Kid Info */}
-                        <div>
-                          <h3 className="text-2xl font-bold text-gray-900">{kid.display_name}</h3>
-                          <p className="text-sm text-gray-600">@{kid.username}</p>
-                        </div>
-                      </div>
-
-                      {/* Stats */}
-                      <div className="flex items-center space-x-8">
-                        <div className="text-right">
-                          <p className="text-4xl font-bold text-yellow-600">{kid.total_stars}⭐</p>
-                          <p className="text-sm text-gray-500">Total Stars</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-semibold text-gray-700">
-                            {kid.approved_count}
-                          </p>
-                          <p className="text-sm text-gray-500">Approved</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-2xl font-semibold text-gray-700">
-                            {kid.submission_count}
-                          </p>
-                          <p className="text-sm text-gray-500">Submissions</p>
-                        </div>
-                      </div>
-                    </div>
+                {/* Stats columns */}
+                <div className="hidden md:flex items-center gap-6">
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-green)' }}>{kid.approved_count}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Approved</div>
                   </div>
-                );
-              })}
-            </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-blue)' }}>{kid.submission_count}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Subs</div>
+                  </div>
+                </div>
+
+                {/* Bar */}
+                <div className="hidden md:block" style={{ width: 120, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: 4,
+                    background: 'linear-gradient(90deg, var(--accent-yellow), var(--accent-orange))',
+                    width: `${barPercent}%`,
+                  }} />
+                </div>
+
+                <div style={{
+                  fontFamily: "'Silkscreen', monospace", fontSize: 16, fontWeight: 700,
+                  color: 'var(--accent-yellow)', minWidth: 60, textAlign: 'right',
+                }}>
+                  {kid.total_stars} &#x2B50;
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Category Breakdown */}
+      {stats?.categoryBreakdown && (
+        <div className="animate-fade-in delay-2" style={{
+          background: 'var(--bg-card)',
+          border: '2px solid var(--border-color)',
+          borderRadius: 10,
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            padding: '16px 20px',
+            borderBottom: '2px solid var(--border-color)',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--accent-purple)', boxShadow: '0 0 8px var(--accent-purple)', display: 'inline-block' }} />
+            <span style={{ fontFamily: "'Silkscreen', monospace", fontSize: 14, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
+              Categories
+            </span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3" style={{ padding: 20 }}>
+            {Object.entries(stats.categoryBreakdown)
+              .sort(([, a], [, b]) => b - a)
+              .map(([category, count]) => (
+                <div key={category} className="flex items-center justify-between" style={{
+                  background: 'var(--bg-dark)',
+                  border: '2px solid var(--border-color)',
+                  borderRadius: 8,
+                  padding: '12px 16px',
+                }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{category}</span>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--accent-blue)' }}>{count}</span>
+                </div>
+              ))}
           </div>
         </div>
-
-        {/* Category Breakdown */}
-        {stats?.categoryBreakdown && (
-          <div className="bg-white rounded-lg shadow">
-            <div className="px-6 py-4 border-b">
-              <h2 className="text-xl font-bold text-gray-900">📊 Category Breakdown (Last 30 Days)</h2>
-            </div>
-            <div className="p-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Object.entries(stats.categoryBreakdown)
-                  .sort(([, a], [, b]) => b - a)
-                  .map(([category, count]) => (
-                    <div
-                      key={category}
-                      className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-lg font-semibold text-gray-900">{category}</span>
-                        <span className="text-2xl font-bold text-blue-600">{count}</span>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-        )}
+      )}
     </div>
   );
 }
